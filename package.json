@@ -1,0 +1,22 @@
+{
+  "name": "dum-and-co",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hyderabadi direct ordering and live kitchen workspace",
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c green,yellow \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "test": "npm test --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm start --prefix backend",
+    "format": "prettier --write backend/src backend/test frontend/src docs README.md deployment.md",
+    "format:check": "prettier --check backend/src backend/test frontend/src"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.9.10"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
