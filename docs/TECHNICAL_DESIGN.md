@@ -48,7 +48,7 @@ On success, a transaction rechecks stock, conditionally deducts available reward
 
 ## Live updates and recovery
 
-WebSocket upgrades validate the session cookie and Origin. Change events contain an order ID rather than a full customer record. Recipients are restricted to its customer, assigned outlet kitchen and central manager. A heartbeat closes dead or expired connections. The browser reconnects after three seconds, refetches on connection, and polls order data every fifteen seconds as a backup. Persisted database state remains the source of truth if a notification is missed.
+WebSocket upgrades validate the Origin and a session-bound ticket on Render. Local development can use the session cookie. Change events contain an order ID and go only to the customer, assigned kitchen and central manager. Sign-out revokes the session and stops its updates. A heartbeat closes dead or expired connections. The browser refetches after reconnecting and polls every fifteen seconds as a backup.
 
 ---
 
@@ -76,7 +76,7 @@ No real personal profile, payment secrets or database credentials are placed in 
 
 | Screen                        | Design decision and purpose                                                                                                                                                         |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Menu and item details         | Large illustrative food photos, restrained green and cream palette, serif headings and clear prices support appetite and scanning. Filters and portion choices keep the menu short. |
+| Menu and item details         | Large food photos, a white canvas, deep pink actions and Geist typography make dishes and prices easy to scan. Filters narrow the list, and the item picker keeps portions separate. |
 | Bag and demo checkout         | Clear cost breakdown, inclusive tax, visible discounts and explicit simulation avoid payment ambiguity. Failed payment has a retry path.                                            |
 | Customer tracking             | A prominent promised time and plain preparation timeline reduce uncertainty. Event history explains changes or delays.                                                              |
 | Kitchen board                 | Separate stage columns, large ticket content, timers and warm late-order colours make prioritization visible. Tablet breakpoints reduce column density.                             |
@@ -87,11 +87,11 @@ The header keeps outlet selection available on phones. Pages include loading, em
 
 ## Verification and practical limits
 
-The backend test suite has 21 passing tests against an isolated MongoDB replica set. Coverage includes paise arithmetic, inclusive tax, coupons, menu hours and stock, consent, role escalation, object-level access, invalid input, CSRF-origin rejection, checkout retries, declined payment, concurrent successful payment retries, single reward credit, invalid stage transitions, model bounds, override minimums, duplicate late alerts, authenticated WebSocket events, recommendations and menu edit validation.
+The backend suite has 29 passing tests against an isolated MongoDB replica set. Coverage includes pricing and tax, menu hours and stock, consent and access control, session and WebSocket revocation, checkout and concurrent payment retries, single reward credit, order transitions, estimate bounds and overrides, late alerts, recommendations and menu validation.
 
-The production frontend builds successfully. Browser verification exercised portions and add-ons, customer sign-in, coupon checkout, failed-then-successful payment, live tracking, matching kitchen arrival, preparation stage change, staff promise override and ready-for-pickup. Desktop and phone layouts are inspected separately. Dependency audits reported no known production dependency vulnerabilities at the time of this build.
+The production frontend builds successfully. Browser checks covered portions and add-ons, checkout and payment retry, live tracking, kitchen stages, staff override, and desktop and phone layouts. The public deployment was tested with sign-in, simulated payment and a live kitchen event. A revoked socket stopped receiving updates immediately and took about 20 seconds to disconnect at the client.
 
-This evidence establishes a working local demonstration, not sustained production throughput. The stated peak of 1,200 orders per hour across outlets has not been load-tested. In-process broadcasts and rate limits assume one API process. Database writes survive restarts, but a crash can lose a live notification; reconnection refetch and polling recover current state. Production should use an outbox and shared pub/sub for durable multi-instance delivery.
+The stated peak of 1,200 orders per hour across outlets still requires load testing. In-process broadcasts and rate limits assume one API process. A restart can lose a live notification. Reconnection and polling recover the latest database state. An outbox and shared pub/sub would support durable delivery across multiple instances.
 
 ---
 
@@ -113,7 +113,7 @@ A6. Demo delivery is radius-checked, has no delivery fee and ends at simulated r
 
 Production priorities are real kitchen observations and calibrated estimates; real outlet/menu/licence information; real payment verification and refunds; a durable notification outbox; Redis fan-out and distributed limits for multiple API instances; data retention and deletion workflows; operational monitoring, backup restoration and capacity tests. Client integrations should remain behind clearly defined adapters rather than mixed into pricing logic.
 
-For reviewer delivery, publish the repository when authorized, preserve the actual local commit history and replace the repository line at the top of this document with its real public URL. Optionally deploy the single-origin app and add its URL. The submission ZIP should contain only the final technical-design PDF and deployment.md, under 25 MB. No public repository, deployment or assessment submission is claimed by this local build.
+The public repository, Vercel storefront and Render API are linked at the top. The submission ZIP contains this PDF and deployment.md, which includes local setup, hosted configuration and synthetic logins. The free Render service can take about a minute to wake after inactivity.
 
 ## Reference and run commands
 
