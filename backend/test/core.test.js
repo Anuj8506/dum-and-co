@@ -388,7 +388,23 @@ test('pausing an item invalidates an unpaid checkout before money/rewards change
   await customer.post('/api/orders').send(cart()).expect(409);
   await kitchen.patch(`/api/menu/${item._id}/availability`).send({ available: true }).expect(200);
 });
-test('delivery radius, coupon rules and maximum party notice are checked server-side', async () => {
+test('delivery requires a complete address and a location inside the outlet radius', async () => {
+  const delivery = {
+    fulfilment: 'delivery',
+    location: { lat: outlet.lat, lng: outlet.lng },
+  };
+  for (const deliveryAddress of ['', '          ']) {
+    const response = await customer
+      .post('/api/orders')
+      .send(cart({ ...delivery, deliveryAddress }))
+      .expect(400);
+    assert.match(response.body.message, /delivery address/i);
+  }
+  const noLocation = await customer
+    .post('/api/orders')
+    .send(cart({ fulfilment: 'delivery', deliveryAddress: 'Fictional demo address' }))
+    .expect(400);
+  assert.match(noLocation.body.message, /share your location/i);
   await customer
     .post('/api/orders')
     .send(
@@ -399,6 +415,13 @@ test('delivery radius, coupon rules and maximum party notice are checked server-
       })
     )
     .expect(400);
+  const valid = await customer
+    .post('/api/orders')
+    .send(cart({ ...delivery, deliveryAddress: '  Fictional demo address  ' }))
+    .expect(201);
+  assert.equal(valid.body.order.deliveryAddress, 'Fictional demo address');
+});
+test('coupon rules and maximum party notice are checked server-side', async () => {
   await customer
     .post('/api/orders')
     .send(cart({ coupon: 'FREEFOOD' }))

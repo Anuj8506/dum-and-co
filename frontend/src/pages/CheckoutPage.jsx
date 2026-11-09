@@ -19,7 +19,7 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState(''),
     [coupon, setCoupon] = useState(''),
     [redeem, setRedeem] = useState(false);
-  const [fulfilment, setFulfilment] = useState('pickup'),
+  const [fulfilment, setFulfilment] = useState(''),
     [address, setAddress] = useState(''),
     [location, setLocation] = useState(null),
     [instructions, setInstructions] = useState('');
@@ -40,6 +40,7 @@ export default function CheckoutPage() {
   const total = subtotal - discount - points * 100;
   const checkout = async (e) => {
     e.preventDefault();
+    if (busy || !fulfilment || !menu.outlet) return;
     setBusy(true);
     setError('');
     try {
@@ -55,8 +56,9 @@ export default function CheckoutPage() {
         coupon,
         redeemPoints: redeem,
         fulfilment,
-        deliveryAddress: address,
-        ...(location ? { location } : {}),
+        ...(fulfilment === 'delivery'
+          ? { deliveryAddress: address.trim(), location: location ?? undefined }
+          : {}),
         instructions,
       });
       setOrder(result.order);
@@ -148,34 +150,43 @@ export default function CheckoutPage() {
           ))}
           {!order && (
             <form id="checkout-form" onSubmit={checkout}>
-              <h3 className="section-label">How would you like it?</h3>
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={fulfilment === 'pickup' ? 'active' : ''}
-                  onClick={() => setFulfilment('pickup')}
-                >
-                  Pick up at kitchen
-                </button>
-                <button
-                  type="button"
-                  className={fulfilment === 'delivery' ? 'active' : ''}
-                  onClick={() => setFulfilment('delivery')}
-                >
+              <fieldset className="fulfilment-options">
+                <legend>Choose delivery or pickup</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="fulfilment"
+                    value="delivery"
+                    required
+                    checked={fulfilment === 'delivery'}
+                    onChange={(e) => setFulfilment(e.target.value)}
+                  />
                   Delivery (demo)
-                </button>
-              </div>
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="fulfilment"
+                    value="pickup"
+                    required
+                    checked={fulfilment === 'pickup'}
+                    onChange={(e) => setFulfilment(e.target.value)}
+                  />
+                  Pick up at kitchen
+                </label>
+              </fieldset>
               {fulfilment === 'delivery' && (
                 <>
                   <label>
-                    Delivery address
+                    Delivery address (required)
                     <textarea
+                      autoComplete="off"
                       required
                       minLength={8}
                       maxLength={300}
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Use a fictional address for the demo"
+                      placeholder="Enter a fictional flat or house number, street and neighbourhood"
                     />
                   </label>
                   <button type="button" className="text-button" onClick={locate}>
@@ -204,6 +215,11 @@ export default function CheckoutPage() {
                 <LockKeyhole size={14} /> DEMO PAYMENT
               </div>
               <h2>One last step.</h2>
+              <p>
+                {order.fulfilment === 'delivery'
+                  ? `Delivery to ${order.deliveryAddress}`
+                  : `Pickup at ${order.outlet.name}`}
+              </p>
               <p>No money will be charged. Choose a method to simulate the payment.</p>
               <div className="segmented">
                 {['UPI', 'Card'].map((m) => (

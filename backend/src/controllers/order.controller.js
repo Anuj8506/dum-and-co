@@ -69,16 +69,14 @@ exports.create = async (req, res) => {
   }
   const outlet = await Outlet.findOne({ _id: body.outlet, active: true });
   if (!outlet) throw problem('This outlet is unavailable.');
+  const deliveryAddress = body.fulfilment === 'delivery' ? body.deliveryAddress.trim() : '';
   if (body.fulfilment === 'delivery') {
-    if (
-      !body.location ||
-      haversine(body.location.lat, body.location.lng, outlet.lat, outlet.lng) > outlet.radiusKm
-    )
+    if (deliveryAddress.length < 8) throw problem('Please enter a complete delivery address.');
+    if (!body.location) throw problem('Share your location so we can check the delivery radius.');
+    if (haversine(body.location.lat, body.location.lng, outlet.lat, outlet.lng) > outlet.radiusKm)
       throw problem(
         'Your location is outside this outlet’s delivery radius. Choose pickup or another outlet.'
       );
-    if (!body.deliveryAddress || body.deliveryAddress.length < 8)
-      throw problem('Please enter a complete delivery address.');
   }
   const menu = await MenuItem.find({ _id: { $in: body.items.map((i) => i.menuItem) } });
   const items = body.items.map((line) => {
@@ -113,7 +111,7 @@ exports.create = async (req, res) => {
       ...pricing,
       coupon: body.coupon,
       fulfilment: body.fulfilment,
-      deliveryAddress: body.deliveryAddress || '',
+      deliveryAddress,
       instructions: body.instructions || '',
       estimate: prediction,
       events: [{ status: 'awaiting_payment', message: 'Order created. Waiting for demo payment.' }],
