@@ -26,6 +26,7 @@ Names only; put real secret values in the hosting service's secret manager.
 | NODE_ENV       | Production/development controls                                                                                                       |
 | PORT           | HTTP server port                                                                                                                      |
 | CLIENT_URL     | Comma-separated exact frontend origins for CORS, CSRF origin checks and WebSocket Origin checks; include the deployed same-origin URL |
+| TRUST_PROXY    | Optional comma-separated IP addresses or CIDR ranges of the reverse proxies that control forwarded headers                            |
 | MONGODB_URI    | MongoDB Atlas or another transaction-capable replica set URI; required in production                                                  |
 | JWT_SECRET     | Random secret of at least 32 characters; required in production                                                                       |
 | LOCAL_DATABASE | Local development helper switch; production never starts the helper                                                                   |
@@ -43,12 +44,14 @@ Recommended: deploy the built frontend and backend on the same HTTPS origin to p
 1. Publish the source repository when approved, preserving local Git history.
 2. Create a MongoDB Atlas replica-set database. Configure an application-specific database user, TLS and a restricted network policy; store its URI only in the host's secret manager.
 3. Configure the variables listed above, including the precise deployed HTTPS origin in `CLIENT_URL`, `NODE_ENV=production`, a strong `JWT_SECRET`, and `MONGODB_URI`.
-4. For a fictional reviewer demo only, explicitly enable `SEED_DEMO`. For real data, disable it and provision staff accounts privately.
+4. For a fictional reviewer demo, enable `SEED_DEMO` and use a separate database with synthetic data. Disabling it blocks sign-in and session reuse for the reserved `dumco.example` accounts, including accounts already in the database.
 5. Build command: `npm ci && npm ci --prefix backend && npm ci --prefix frontend && npm run build`.
 6. Start command: `npm start`. The host supplies `PORT` if necessary.
 7. Health endpoint: `/api/health`. Enable WebSocket upgrades to `/ws` and set an idle timeout above 30 seconds.
 8. Verify customer, staff and manager demo flows, reconnection, stock pauses and order isolation. Do not use real card data: payments remain explicitly simulated.
 9. Add the real GitHub repository URL at the top of the TDD. Add the live URL if publicly deployed. Confirm repository visibility for the review period before uploading submission files.
+
+Set `TRUST_PROXY` only when traffic arrives through proxies with known addresses that overwrite or correctly append forwarded IP headers. Direct connections ignore forwarded IP headers by default.
 
 Separate Vercel/Render hosting can match the hostel project's providers, but cross-site cookie handling requires a reviewed SameSite=None + Secure configuration and CSRF defence. This build intentionally recommends a single origin instead of silently weakening cookies.
 

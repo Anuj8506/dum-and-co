@@ -35,9 +35,7 @@ function summary(orders) {
   };
 }
 exports.dashboard = async (req, res) => {
-  const orders = await Order.find({ ...scope(req.user), paymentStatus: 'paid' })
-    .populate('outlet')
-    .lean();
+  const orders = await Order.find(scope(req.user)).populate('outlet').lean();
   const outlets = await Outlet.find(
     req.user.role === 'kitchen' ? { _id: req.user.outlet } : {}
   ).lean();

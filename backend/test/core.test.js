@@ -7,6 +7,14 @@ const http = require('node:http');
 const { once } = require('node:events');
 const { WebSocket } = require('ws');
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = crypto.randomBytes(48).toString('hex');
+process.env.CLIENT_URL = 'http://localhost:5000';
+process.env.SEED_DEMO = 'true';
+process.env.TRUST_PROXY = '';
+
+const env = require('../src/config/env');
 const { seed } = require('../src/services/seed');
 const User = require('../src/models/User');
 const MenuItem = require('../src/models/MenuItem');
@@ -23,6 +31,18 @@ const login = async (email) => {
   await agent.post('/api/auth/login').send({ email, password: 'DumCoDemo2026!' }).expect(200);
   return agent;
 };
+const demoCookie = async (email) => {
+  const response = await request(app)
+    .post('/api/auth/login')
+    .send({ email, password: 'DumCoDemo2026!' })
+    .expect(200);
+  return response.headers['set-cookie'][0].split(';')[0];
+};
+const connectSocket = (cookie) =>
+  new WebSocket(`ws://127.0.0.1:${server.address().port}/ws`, {
+    headers: { Origin: 'http://localhost:5000', Cookie: cookie },
+    handshakeTimeout: 3000,
+  });
 const cart = (extras) => ({
   outlet: String(outlet._id),
   idempotencyKey: crypto.randomUUID(),
@@ -125,6 +145,78 @@ test('registration cannot self-grant a staff role and requires consent', async (
     })
     .expect(400);
 });
+
+test('sign-out revokes a copied cookie and closes its WebSocket without affecting another session', async (t) => {
+  const cookie = await demoCookie('guest@dumco.example');
+  const otherCookie = await demoCookie('guest@dumco.example');
+  assert.notEqual(cookie, otherCookie);
+  const ws = connectSocket(cookie);
+  t.after(() => ws.terminate());
+  await once(ws, 'message');
+  const closed = once(ws, 'close');
+  await request(app).post('/api/auth/logout').set('Cookie', cookie).expect(200);
+  assert.equal((await closed)[0], 1008);
+  await request(app).get('/api/auth/me').set('Cookie', cookie).expect(401);
+  await request(app).get('/api/auth/me').set('Cookie', otherCookie).expect(200);
+  const replay = connectSocket(cookie);
+  t.after(() => replay.terminate());
+  await assert.rejects(once(replay, 'open'));
+});
+
+test('disabling demo mode blocks persisted demo credentials and cookies', async (t) => {
+  const cookie = await demoCookie('admin@dumco.example');
+  const previous = env.seedDemo;
+  env.seedDemo = false;
+  try {
+    await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'admin@dumco.example', password: 'DumCoDemo2026!' })
+      .expect(401);
+    await request(app).get('/api/admin/dashboard').set('Cookie', cookie).expect(401);
+    const replay = connectSocket(cookie);
+    t.after(() => replay.terminate());
+    await assert.rejects(once(replay, 'open'));
+    await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: 'Reserved namespace fixture',
+        email: 'unseeded@dumco.example',
+        password: 'LongDemoPassword!',
+        consent: true,
+      })
+      .expect(400);
+  } finally {
+    env.seedDemo = previous;
+  }
+});
+
+test('bcrypt input limits use UTF-8 bytes and reject overlong suffixes', async () => {
+  const password = 'é'.repeat(36);
+  const signup = { name: 'Unicode fixture', email: 'bytes@demo.example', consent: true };
+  await request(app)
+    .post('/api/auth/register')
+    .send({ ...signup, password: password + 'x' })
+    .expect(400);
+  await request(app)
+    .post('/api/auth/register')
+    .send({ ...signup, password })
+    .expect(201);
+  await request(app).post('/api/auth/login').send({ email: signup.email, password }).expect(200);
+  await request(app)
+    .post('/api/auth/login')
+    .send({ email: signup.email, password: password + 'y' })
+    .expect(400);
+});
+
+test('malformed JSON errors do not echo the request body', async () => {
+  const response = await request(app)
+    .post('/api/auth/login')
+    .set('Content-Type', 'application/json')
+    .send('invalid-audit-marker')
+    .expect(400);
+  assert.deepEqual(response.body, { message: 'Request body is not valid JSON.' });
+  assert.equal(response.headers['cache-control'], 'no-store');
+});
 test('rejects query injection, invalid quantities, invalid IDs and hostile origins', async () => {
   await request(app)
     .post('/api/auth/login')
@@ -157,6 +249,64 @@ test('kitchens cannot see unpaid orders belonging to another outlet', async () =
   await otherKitchen.get(`/api/orders/${lastOrder._id}`).expect(404);
   const response = await otherKitchen.get('/api/orders').expect(200);
   assert.ok(response.body.orders.every((o) => o.outlet._id !== String(outlet._id)));
+});
+
+test('staff only see a customer checkout after payment and failed retries are recorded once', async (t) => {
+  const ws = connectSocket(await demoCookie('kitchen@dumco.example'));
+  t.after(() => ws.terminate());
+  await once(ws, 'message');
+  const { body } = await customer
+    .post('/api/orders')
+    .send(
+      cart({
+        fulfilment: 'delivery',
+        deliveryAddress: 'Synthetic audit address',
+        location: { lat: outlet.lat, lng: outlet.lng },
+      })
+    )
+    .expect(201);
+  const id = body.order._id;
+  await customer.get(`/api/orders/${id}`).expect(200);
+  for (const staff of [kitchen, admin]) {
+    await staff.get(`/api/orders/${id}`).expect(404);
+    const history = await staff.get('/api/orders').expect(200);
+    assert.ok(history.body.orders.every((order) => order._id !== id));
+  }
+  const firstMessage = once(ws, 'message');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const failure = await customer
+      .post(`/api/orders/${id}/payment`)
+      .send({ outcome: 'failed', method: 'UPI' })
+      .expect(200);
+    assert.equal(
+      failure.body.order.events.filter((e) => e.message.includes('payment failed')).length,
+      1
+    );
+  }
+  await kitchen.patch(`/api/menu/${item._id}/availability`).send({ available: true }).expect(200);
+  assert.equal(JSON.parse((await firstMessage)[0]).type, 'menu.changed');
+  const paymentMessage = once(ws, 'message');
+  await customer
+    .post(`/api/orders/${id}/payment`)
+    .send({ outcome: 'success', method: 'UPI' })
+    .expect(200);
+  assert.deepEqual(JSON.parse((await paymentMessage)[0]), { type: 'orders.changed', id });
+  await kitchen.get(`/api/orders/${id}`).expect(200);
+  await otherKitchen.get(`/api/orders/${id}`).expect(404);
+});
+
+test('splitting an identical dish across cart lines cannot bypass the quantity cap', async () => {
+  const body = cart();
+  const line = { ...body.items[0], addons: item.addons.map((addon) => addon.name), quantity: 11 };
+  const duplicate = { ...line, addons: [...line.addons].reverse(), quantity: 10 };
+  await customer
+    .post('/api/orders')
+    .send({ ...body, items: [line, duplicate] })
+    .expect(400);
+  await customer
+    .post('/api/orders')
+    .send({ ...body, items: [{ ...line, quantity: 10 }, duplicate] })
+    .expect(201);
 });
 test('payment decline is retryable; repeated successful payment does not redeem twice', async () => {
   const before = (await User.findOne({ email: 'guest@dumco.example' })).points;

@@ -10,12 +10,12 @@ import {
   CheckCircle2,
   MapPin,
 } from 'lucide-react';
-import { useApp } from '../utils/AppContext';
+import { MAX_CART_LINE_QUANTITY, useApp } from '../utils/AppContext';
 import { money } from '../utils/format';
 import { orderService } from '../services/orderService';
 import { Empty } from '../components/States';
 export default function CheckoutPage() {
-  const { cart, setCart, menu, user, notify, refreshUser } = useApp();
+  const { cart, setCart, changeCartQuantity, menu, user, notify, refreshUser } = useApp();
   const [couponInput, setCouponInput] = useState(''),
     [coupon, setCoupon] = useState(''),
     [redeem, setRedeem] = useState(false);
@@ -38,12 +38,6 @@ export default function CheckoutPage() {
     ? Math.min(user?.points || 0, 100, Math.floor((subtotal - discount) / 100))
     : 0;
   const total = subtotal - discount - points * 100;
-  const changeQty = (key, amount) =>
-    setCart(
-      cart
-        .map((i) => (i.key === key ? { ...i, quantity: Math.min(20, i.quantity + amount) } : i))
-        .filter((i) => i.quantity > 0)
-    );
   const checkout = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -136,15 +130,15 @@ export default function CheckoutPage() {
                 <button
                   aria-label={`Remove one ${item.name}`}
                   disabled={!!order}
-                  onClick={() => changeQty(item.key, -1)}
+                  onClick={() => changeCartQuantity(item.key, -1)}
                 >
                   <Minus size={13} />
                 </button>
                 <span>{item.quantity}</span>
                 <button
                   aria-label={`Add one ${item.name}`}
-                  disabled={!!order || item.quantity >= 20}
-                  onClick={() => changeQty(item.key, 1)}
+                  disabled={!!order || item.quantity >= MAX_CART_LINE_QUANTITY}
+                  onClick={() => changeCartQuantity(item.key, 1)}
                 >
                   <Plus size={13} />
                 </button>

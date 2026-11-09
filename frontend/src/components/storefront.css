@@ -1,0 +1,380 @@
+.taste-storefront {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.taste-hero {
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  position: relative;
+  min-height: clamp(480px, 72svh, 720px);
+  padding: 64px 24px;
+  overflow: hidden;
+  background: var(--ink);
+  color: white;
+  text-align: center;
+}
+
+.taste-hero-photo,
+.taste-hero::after {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.taste-hero-photo {
+  object-fit: cover;
+  object-position: center 54%;
+}
+
+.taste-hero::after {
+  content: '';
+  background: radial-gradient(ellipse at center, #000c 8%, #0009 56%, #0005 100%);
+}
+
+.taste-hero-content {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+}
+
+.taste-hero h1 {
+  margin: 0;
+  font-size: clamp(3rem, 8.6vw, 8.4rem);
+  font-weight: 650;
+  font-family: inherit;
+  line-height: 0.94;
+  letter-spacing: -0.085em;
+  color: inherit;
+}
+
+.taste-hero p {
+  color: white;
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  max-width: 37ch;
+  text-wrap: balance;
+}
+
+.taste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.taste-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 650;
+  transition:
+    background-color 180ms,
+    color 180ms;
+}
+
+.taste-button-light,
+.taste-button-dark {
+  background: var(--action);
+  color: white;
+}
+.taste-button-light:hover,
+.taste-button-dark:hover {
+  background: var(--action-hover);
+}
+.taste-button-outline {
+  border-color: var(--canvas);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.taste-button-outline:hover {
+  background: var(--surface-strong);
+}
+.taste-hero :focus-visible {
+  outline-color: white;
+}
+
+.taste-chapter {
+  width: min(1240px, calc(100% - 80px));
+  margin-inline: auto;
+  padding-block: clamp(64px, 8vw, 118px);
+}
+
+.taste-heading {
+  margin: 0 0 28px;
+  font-family: inherit;
+  font-size: clamp(2.15rem, 5vw, 5.25rem);
+  font-weight: 620;
+  letter-spacing: -0.075em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.taste-inline-image {
+  display: inline-block;
+  width: 1.6em;
+  height: 0.67em;
+  border-radius: 999px;
+  vertical-align: 0.06em;
+  background: var(--surface-strong) url('/images/biryani.jpg') center 56% / cover;
+}
+
+.taste-collections {
+  display: grid;
+  grid-auto-flow: dense;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+  transition: grid-template-columns 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.taste-collection {
+  min-width: 0;
+  min-height: clamp(220px, 26vw, 370px);
+  isolation: isolate;
+  display: flex;
+  align-items: end;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(16px, 2vw, 28px);
+  border-radius: 14px;
+  background: var(--ink);
+  color: white;
+}
+
+.taste-collection img,
+.taste-collection::after {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.taste-collection img,
+.taste-feature-photo img {
+  transition: transform 700ms ease-out;
+}
+.taste-collection:is(:hover, :focus-visible) img,
+.taste-feature:hover img {
+  transform: scale(1.05);
+}
+.taste-collection::after {
+  content: '';
+  background: linear-gradient(0deg, #000e, #0002 77%);
+}
+.taste-collection h3 {
+  font-size: clamp(1.3rem, 2.6vw, 2.35rem);
+  letter-spacing: -0.045em;
+  margin-bottom: 4px;
+}
+.taste-collection p {
+  color: white;
+  max-width: 25ch;
+  font-size: 0.9375rem;
+}
+.taste-tile-arrow {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+
+@media (min-width: 801px) {
+  .taste-collections:has(.taste-collection:nth-child(2):is(:hover, :focus-visible)) {
+    grid-template-columns: 1fr 2fr 1fr;
+  }
+  .taste-collections:has(.taste-collection:nth-child(3):is(:hover, :focus-visible)) {
+    grid-template-columns: 1fr 1fr 2fr;
+  }
+}
+
+.taste-storefront .menu-section {
+  padding-top: clamp(30px, 4vw, 56px);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 28px;
+}
+
+.taste-storefront :is(.section-heading, .recommendation-section) h2 {
+  font-family: inherit;
+  font-weight: 620;
+  letter-spacing: -0.065em;
+}
+
+.taste-feature {
+  display: grid;
+  grid-template-columns: 1.14fr 1fr;
+  align-items: stretch;
+  padding-block: 0;
+  margin-block: clamp(64px, 8vw, 118px);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.taste-feature-photo {
+  min-height: 390px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+.taste-feature-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.taste-feature-content {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 16px;
+  padding: clamp(24px, 5vw, 76px);
+}
+.taste-feature-content h2 {
+  font-size: clamp(2rem, 4vw, 4rem);
+  margin: 0;
+}
+.taste-feature-content p {
+  color: var(--body);
+  max-width: 38ch;
+}
+.taste-feature-label {
+  font-weight: 650;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+.taste-carousel-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.875rem;
+}
+.taste-carousel-controls button {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+}
+.taste-carousel-controls button:hover {
+  background: var(--surface-strong);
+}
+
+.taste-story {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 6vw, 94px);
+  border-top: 1px solid var(--line);
+}
+
+.taste-story-stack {
+  display: grid;
+  gap: 12px;
+}
+.taste-story-card {
+  display: flex;
+  align-items: start;
+  gap: 20px;
+  min-height: 166px;
+  padding: clamp(21px, 3vw, 38px);
+  border-radius: 14px;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  transform-origin: center top;
+}
+.taste-story-card svg {
+  flex-shrink: 0;
+  color: var(--action);
+}
+.taste-story-card h3 {
+  font-size: 1.45rem;
+  letter-spacing: -0.04em;
+  margin-bottom: 6px;
+}
+.taste-story-card p {
+  color: var(--body);
+}
+
+@media (min-width: 800px) and (prefers-reduced-motion: no-preference) {
+  .taste-story-stack {
+    gap: 24px;
+    padding-bottom: 52px;
+  }
+  .taste-story-card {
+    position: sticky;
+    top: calc(64px + var(--stack-offset));
+  }
+}
+
+.taste-storefront .taste-party {
+  padding: clamp(30px, 6vw, 88px);
+  margin-block: 0 20px;
+  background: var(--surface-soft);
+}
+.taste-storefront .taste-party h2 {
+  font-family: inherit;
+  font-weight: 620;
+  font-size: clamp(2rem, 4.2vw, 4.4rem);
+  letter-spacing: -0.07em;
+}
+.taste-storefront .taste-party p {
+  color: var(--body);
+}
+
+@media (max-width: 800px) {
+  .taste-hero {
+    min-height: 515px;
+  }
+  .taste-chapter {
+    width: calc(100% - 32px);
+  }
+  .taste-collections,
+  .taste-feature,
+  .taste-story {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .taste-collection {
+    min-height: 185px;
+  }
+  .taste-feature-photo {
+    min-height: 270px;
+  }
+  .taste-story-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 370px) {
+  .taste-hero {
+    padding-inline: 14px;
+  }
+  .taste-actions {
+    gap: 8px;
+  }
+  .taste-button {
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taste-storefront *,
+  .taste-storefront *::before,
+  .taste-storefront *::after {
+    transition: none;
+  }
+  .taste-collection:is(:hover, :focus-visible) img,
+  .taste-feature:hover img {
+    transform: none;
+  }
+}

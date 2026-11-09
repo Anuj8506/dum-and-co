@@ -9,19 +9,17 @@ const { unitPrice, totals, isAvailable, indiaHour, haversine } = require('../ser
 const { predictPrep } = require('../algorithms/prepTime');
 const { broadcastOrder } = require('../services/realtime');
 const problem = (message, status = 400) => Object.assign(new Error(message), { status });
-const scope = (user) =>
-  user.role === 'admin'
-    ? {}
-    : user.role === 'kitchen'
-      ? { outlet: user.outlet }
-      : { user: user._id };
+const scope = (user) => {
+  if (user.role === 'admin') return { paymentStatus: 'paid' };
+  if (user.role === 'kitchen') return { outlet: user.outlet, paymentStatus: 'paid' };
+  return { user: user._id };
+};
 const populated = (order) => Order.findById(order._id).populate('outlet').populate('user', 'name');
 
 exports.list = async (req, res) => {
   const staff = req.user.role !== 'customer';
   const activeFilter = {
     ...scope(req.user),
-    paymentStatus: 'paid',
     status: { $in: ['confirmed', 'preparing', 'ready'] },
   };
   const active = staff
@@ -135,7 +133,9 @@ exports.create = async (req, res) => {
 };
 exports.payment = async (req, res) => {
   let result;
+  let changed;
   await mongoose.connection.transaction(async (session) => {
+    changed = false;
     const order = await Order.findOne({ _id: req.params.id, user: req.user._id }).session(session);
     if (!order) throw problem('Order not found.', 404);
     if (order.paymentStatus === 'paid') {
@@ -146,6 +146,10 @@ exports.payment = async (req, res) => {
     if (Date.now() - order.createdAt.getTime() > 15 * 60000)
       throw problem('Checkout expired. Please create a new order.', 409);
     if (req.body.outcome === 'failed') {
+      if (order.paymentStatus === 'failed') {
+        result = order;
+        return;
+      }
       order.paymentStatus = 'failed';
       order.events.push({
         status: 'awaiting_payment',
@@ -184,15 +188,16 @@ exports.payment = async (req, res) => {
     }
     await order.save({ session });
     result = order;
+    changed = true;
   });
-  broadcastOrder(result);
+  if (changed) broadcastOrder(result);
   res.json({ order: await populated(result), simulated: true });
 };
 exports.update = async (req, res) => {
   let result;
   await mongoose.connection.transaction(async (session) => {
     const order = await Order.findOne({ _id: req.params.id, ...scope(req.user) }).session(session);
-    if (!order || order.paymentStatus !== 'paid') throw problem('Paid order not found.', 404);
+    if (!order) throw problem('Paid order not found.', 404);
     if (req.body.overrideMinutes !== undefined) {
       if (['cancelled', 'handed_off'].includes(order.status))
         throw problem('This order is already closed.', 409);

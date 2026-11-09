@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
-import {
-  Search,
-  ArrowDown,
-  Clock3,
-  Leaf,
-  Heart,
-  ArrowRight,
-  MapPin,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Search, Leaf, ArrowRight, MapPin, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../utils/AppContext';
 import MenuCard from '../components/MenuCard';
 import ItemModal from '../components/ItemModal';
 import { Loading, ErrorState } from '../components/States';
+import { StorefrontIntro, FeaturedDishes, OrderingStory } from '../components/Storefront';
 import api from '../services/api';
 const categories = [
   'All favourites',
@@ -66,78 +58,22 @@ export default function MenuPage() {
       (!veg || i.vegetarian) &&
       `${i.name} ${i.description}`.toLowerCase().includes(query.toLowerCase())
   );
+  const featured = categories
+    .slice(1)
+    .flatMap((name) =>
+      menu.items.filter((item) => item.available && item.category === name).slice(0, 1)
+    );
   return (
-    <main>
-      <section className="hero">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span /> FROM OUR HANDI TO YOUR HOME
-          </div>
-          <h1>
-            Good things
-            <br />
-            take <em>dum.</em>
-          </h1>
-          <p>
-            Sealed with tradition. Slow-cooked with love.
-            <br />
-            Your Hyderabadi favourites, straight from our kitchen.
-          </p>
-          <a className="button hero-button" href="#menu">
-            Find your favourite <ArrowDown size={17} />
-          </a>
-          <div className="hero-notes">
-            <span>
-              <Clock3 size={15} /> Freshly prepared
-            </span>
-            <span>
-              <Heart size={15} /> Better when you order direct
-            </span>
-          </div>
-        </div>
-        <div className="hero-visual">
-          <img
-            src="/images/hero.jpg"
-            alt="Fragrant Hyderabadi biryani with aromatic basmati rice"
-            fetchPriority="high"
-          />
-          <div className="hero-stamp">
-            <span>THE REAL</span>
-            <strong>Hyderabadi</strong>
-            <span>LOVE AFFAIR</span>
-          </div>
-          <div className="hero-caption">
-            <span>THE HOUSE FAVOURITE</span>
-            <strong>
-              Chicken dum biryani <ArrowRight size={18} />
-            </strong>
-          </div>
-        </div>
-      </section>
-      <section className="promise-strip">
-        <div>
-          <Leaf size={20} />
-          <span>
-            Real ingredients.<small>No shortcuts in our kitchen.</small>
-          </span>
-        </div>
-        <div>
-          <CookingIcon />
-          <span>
-            Slow is our secret.<small>Every layer deserves its time.</small>
-          </span>
-        </div>
-        <div>
-          <Heart size={20} />
-          <span>
-            A little more rewarding.<small>Earn points on direct orders.</small>
-          </span>
-        </div>
-      </section>
+    <main className="taste-storefront w-full max-w-full overflow-x-clip">
+      <StorefrontIntro
+        onBrowse={(name) => {
+          setCategory(name);
+          setQuery('');
+        }}
+      />
       {suggestions.length > 0 && (
         <section className="recommendation-section">
-          <div className="eyebrow">A LITTLE SOMETHING FAMILIAR</div>
-          <h2>Your kind of good.</h2>
+          <h2>Inspired by your orders</h2>
           <p>Inspired by your past orders. Choose a dish to make it yours.</p>
           <div className="food-grid">
             {suggestions.map((s) => {
@@ -150,9 +86,8 @@ export default function MenuPage() {
       <section className="menu-section" id="menu">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">SOMETHING FOR EVERY CRAVING</div>
-            <h2>The good stuff.</h2>
-            <p>Old favourites. New cravings. Always made with heart.</p>
+            <h2>Our menu</h2>
+            <p>Choose your favourites and make them yours.</p>
           </div>
           <div className="search-box">
             <Search size={18} />
@@ -175,6 +110,7 @@ export default function MenuPage() {
               <button
                 key={c}
                 className={category === c ? 'active' : ''}
+                aria-pressed={category === c}
                 onClick={() => setCategory(c)}
               >
                 {c}
@@ -226,14 +162,15 @@ export default function MenuPage() {
           ordering.
         </p>
       </section>
-      <section className="party-banner">
+      <FeaturedDishes dishes={featured} onSelect={setSelected} />
+      <OrderingStory />
+      <section className="party-banner taste-party">
         <div>
-          <div className="eyebrow">MORE PEOPLE, MORE BIRYANI</div>
-          <h2>Your people. Our handi.</h2>
-          <p>Office lunches, family celebrations, and every excuse to get together.</p>
+          <h2>Bring everyone to the table.</h2>
+          <p>Order for an office lunch, a family gathering, or your next celebration.</p>
         </div>
         <Link to="/party" className="button cream">
-          Let’s plan a feast <ArrowRight size={17} />
+          Plan a party order <ArrowRight size={17} />
         </Link>
       </section>
       {menu.outlet && (
@@ -245,12 +182,5 @@ export default function MenuPage() {
         <ItemModal key={selected._id} item={selected} onClose={() => setSelected(null)} />
       )}
     </main>
-  );
-}
-function CookingIcon() {
-  return (
-    <span style={{ fontSize: 23 }} aria-hidden="true">
-      ♨
-    </span>
   );
 }

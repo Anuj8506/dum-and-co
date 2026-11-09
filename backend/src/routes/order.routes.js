@@ -2,6 +2,39 @@ const router = require('express').Router();
 const { authenticate, requireRole } = require('../middleware/auth.middleware');
 const { validate, id, z } = require('../middleware/validate.middleware');
 const c = require('../controllers/order.controller');
+
+const maxQuantity = 20;
+const orderItems = z
+  .array(
+    z.object({
+      menuItem: id,
+      portion: z.string().max(40),
+      addons: z.array(z.string().max(40)).max(10).default([]),
+      quantity: z.number().int().min(1).max(maxQuantity),
+    })
+  )
+  .min(1)
+  .max(30)
+  .superRefine((items, context) => {
+    const quantities = new Map();
+    for (const [index, item] of items.entries()) {
+      const key = JSON.stringify([
+        item.menuItem.toLowerCase(),
+        item.portion,
+        [...item.addons].sort(),
+      ]);
+      const quantity = (quantities.get(key) ?? 0) + item.quantity;
+      if (quantity > maxQuantity) {
+        context.addIssue({
+          code: 'custom',
+          path: [index, 'quantity'],
+          message: `Choose at most ${maxQuantity} of the same dish configuration.`,
+        });
+      }
+      quantities.set(key, quantity);
+    }
+  });
+
 router.use(authenticate);
 router.get('/', c.list);
 router.get('/:id', c.get);
@@ -12,17 +45,7 @@ router.post(
     z.object({
       outlet: id,
       idempotencyKey: z.string().uuid(),
-      items: z
-        .array(
-          z.object({
-            menuItem: id,
-            portion: z.string().max(40),
-            addons: z.array(z.string().max(40)).max(10).default([]),
-            quantity: z.number().int().min(1).max(20),
-          })
-        )
-        .min(1)
-        .max(30),
+      items: orderItems,
       coupon: z.string().trim().toUpperCase().max(20).default(''),
       redeemPoints: z.boolean().default(false),
       fulfilment: z.enum(['pickup', 'delivery']).default('pickup'),

@@ -1,10 +1,9 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { Loading, Empty } from './components/States';
 import { useApp } from './utils/AppContext';
-import MenuPage from './pages/MenuPage';
 import LoginPage from './pages/LoginPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
@@ -13,6 +12,8 @@ import KitchenPage from './pages/KitchenPage';
 import AdminMenuPage from './pages/AdminMenuPage';
 import DashboardPage from './pages/DashboardPage';
 import PartyPage from './pages/PartyPage';
+
+const MenuPage = lazy(() => import('./pages/MenuPage'));
 
 function ProtectedRoute({ roles, children }) {
   const { user, authLoading } = useApp();
@@ -44,7 +45,14 @@ export default function App() {
       <Navbar />
       <div id="main-content">
         <Routes>
-          <Route path="/" element={<MenuPage />} />
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<Loading text="Opening the kitchen…" />}>
+                <MenuPage />
+              </Suspense>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<LoginPage key="register" register />} />
           <Route path="/checkout" element={<CheckoutPage />} />

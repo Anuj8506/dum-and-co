@@ -1,8 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ChefHat, UserRound, Settings2, CookingPot } from 'lucide-react';
 import { useApp } from '../utils/AppContext';
 import { authService } from '../services/authService';
+import api from '../services/api';
+
+function loginDestination(next) {
+  if (!next?.startsWith('/')) return '/';
+  try {
+    const origin = window.location.origin;
+    const url = new URL(next, origin);
+    if (url.origin === origin && !url.pathname.startsWith('//')) {
+      return url.pathname + url.search + url.hash;
+    }
+  } catch {
+    return '/';
+  }
+  return '/';
+}
+
 export default function LoginPage({ register = false }) {
   const { setUser, notify } = useApp();
   const [form, setForm] = useState({
@@ -14,8 +30,18 @@ export default function LoginPage({ register = false }) {
   });
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (register) return;
+    const controller = new AbortController();
+    api
+      .get('/health', { signal: controller.signal })
+      .then(({ demo }) => setDemoEnabled(demo === true))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [register]);
   const submit = async (e, demoEmail) => {
     e?.preventDefault();
     setBusy(true);
@@ -26,14 +52,7 @@ export default function LoginPage({ register = false }) {
         : authService.login(demoEmail ? { email: demoEmail, password: 'DumCoDemo2026!' } : form));
       setUser(result.user);
       notify(`Welcome${register ? ' to the table' : ' back'}, ${result.user.name}.`);
-      const next = params.get('next');
-      navigate(
-        result.user.role === 'customer'
-          ? next?.startsWith('/') && !next.startsWith('//')
-            ? next
-            : '/'
-          : '/kitchen'
-      );
+      navigate(result.user.role === 'customer' ? loginDestination(params.get('next')) : '/kitchen');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -140,7 +159,7 @@ export default function LoginPage({ register = false }) {
             {register ? 'Sign in' : 'Create an account'}
           </Link>
         </p>
-        {!register && (
+        {!register && demoEnabled && (
           <div className="demo-accounts">
             <div className="eyebrow">TAKE A LOOK AROUND</div>
             <p>Use a seeded demo account. No personal details needed.</p>

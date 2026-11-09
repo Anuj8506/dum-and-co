@@ -20,6 +20,10 @@ module.exports = {
   secret,
   localDir,
   port: Number(process.env.PORT || 5000),
+  trustedProxies: (process.env.TRUST_PROXY || '')
+    .split(',')
+    .map((network) => network.trim())
+    .filter(Boolean),
   origins: (
     process.env.CLIENT_URL ||
     'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000'

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AppProvider } from './utils/AppContext';
+import '@fontsource-variable/geist';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -7,7 +7,7 @@ const { rateLimit } = require('express-rate-limit');
 const env = require('./config/env');
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', env.production ? 1 : false);
+app.set('trust proxy', env.trustedProxies.length ? env.trustedProxies : false);
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -28,7 +28,16 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: '128kb' }));
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  if (
+    ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method) &&
+    req.headers.origin &&
+    !env.origins.includes(req.headers.origin)
+  )
+    return res.status(403).json({ message: 'This origin is not permitted.' });
+  next();
+});
 app.use(
   '/api',
   rateLimit({
@@ -39,16 +48,7 @@ app.use(
     message: { message: 'Please slow down and try again.' },
   })
 );
-app.use('/api', (req, res, next) => {
-  if (
-    ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method) &&
-    req.headers.origin &&
-    !env.origins.includes(req.headers.origin)
-  )
-    return res.status(403).json({ message: 'This origin is not permitted.' });
-  res.set('Cache-Control', 'no-store');
-  next();
-});
+app.use('/api', express.json({ limit: '128kb' }));
 app.get('/api/health', (req, res) =>
   res.json({ status: 'ok', demo: env.seedDemo, payments: 'simulated' })
 );
@@ -64,6 +64,8 @@ if (fs.existsSync(frontend)) {
 }
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
+  if (error.type === 'entity.parse.failed')
+    return res.status(400).json({ message: 'Request body is not valid JSON.' });
   if (error.code === 11000)
     return res.status(409).json({ message: 'That email or request already exists.' });
   const status =

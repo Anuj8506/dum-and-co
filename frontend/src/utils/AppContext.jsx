@@ -2,6 +2,8 @@ import { useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AppContext as Context } from './AppContextStore';
 import { authService } from '../services/authService';
 import { menuService } from '../services/menuService';
+export const MAX_CART_LINE_QUANTITY = 20;
+
 const read = (key, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -84,9 +86,11 @@ export function AppProvider({ children }) {
           refreshUser();
         }
       };
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         setConnected(false);
-        if (!closed) retry = setTimeout(connect, 3000);
+        if (closed) return;
+        if (event.code === 1008) refreshUser();
+        else retry = setTimeout(connect, 3000);
       };
       socket.onerror = () => socket.close();
     };
@@ -109,11 +113,23 @@ export function AppProvider({ children }) {
       const key = `${line.menuItem}:${line.portion}:${[...line.addons].sort().join(',')}`;
       const found = current.find((i) => i.key === key);
       return found
-        ? current.map((i) => (i.key === key ? { ...i, quantity: Math.min(20, i.quantity + 1) } : i))
+        ? current.map((i) =>
+            i.key === key ? { ...i, quantity: Math.min(MAX_CART_LINE_QUANTITY, i.quantity + 1) } : i
+          )
         : [...current, { ...line, key, quantity: 1 }];
     });
     notify('Added to your bag.');
   };
+  const changeCartQuantity = (key, amount) =>
+    setCart((current) =>
+      current
+        .map((line) =>
+          line.key === key
+            ? { ...line, quantity: Math.min(MAX_CART_LINE_QUANTITY, line.quantity + amount) }
+            : line
+        )
+        .filter((line) => line.quantity > 0)
+    );
   const logout = async () => {
     try {
       await authService.logout();
@@ -140,6 +156,7 @@ export function AppProvider({ children }) {
         refreshMenu,
         chooseOutlet,
         addToCart,
+        changeCartQuantity,
         notify,
         logout,
         revision,

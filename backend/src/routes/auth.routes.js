@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { rateLimit } = require('express-rate-limit');
+const { truncates } = require('bcryptjs');
 const { validate, z } = require('../middleware/validate.middleware');
 const { authenticate } = require('../middleware/auth.middleware');
 const c = require('../controllers/auth.controller');
@@ -11,12 +12,12 @@ const limiter = rateLimit({
   message: { message: 'Too many attempts. Please try again in 15 minutes.' },
 });
 const email = z.string().trim().email().max(180);
-router.post(
-  '/login',
-  limiter,
-  validate(z.object({ email, password: z.string().min(1).max(128) })),
-  c.login
-);
+const password = (minimum) =>
+  z
+    .string()
+    .min(minimum)
+    .refine((value) => !truncates(value), 'Use at most 72 bytes.');
+router.post('/login', limiter, validate(z.object({ email, password: password(1) })), c.login);
 router.post(
   '/register',
   limiter,
@@ -24,7 +25,7 @@ router.post(
     z.object({
       name: z.string().trim().min(2).max(80),
       email,
-      password: z.string().min(10).max(128),
+      password: password(10),
       consent: z.literal(true),
       marketingOptIn: z.boolean().default(false),
     })
