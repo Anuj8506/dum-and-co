@@ -2,7 +2,9 @@
 
 Repository URL: https://github.com/Anuj8506/dum-and-co
 
-Live application: Local demonstration at http://localhost:5000. No public deployment is claimed.
+Live application: https://dum-and-co.vercel.app/
+
+API health: https://dum-and-co-api.onrender.com/api/health
 
 Author: Anuj Kumar Singh
 
@@ -14,7 +16,7 @@ The application uses React with Vite and Tailwind, Express on Node.js, MongoDB w
 
 A single backend process is a deliberate choice for this time-boxed slice. HTTP owns durable reads and writes, while WebSocket announces scoped changes and clients refetch authorized records. MongoDB transactions protect payment and reward state. There is no Kafka or Redis dependency for this local demonstration; distributed notification delivery is a documented scaling step.
 
-Development starts a persistent loopback-only MongoDB replica set automatically. Production requires a real transaction-capable replica set and a configured secret. Express can serve the compiled frontend and APIs on one origin, avoiding cross-site session complexity.
+Development starts a persistent loopback-only MongoDB replica set automatically. The hosted demo serves the frontend on Vercel and runs Express on Render with a separate MongoDB Atlas replica set. Vercel proxies HTTP API calls so session cookies stay on the frontend origin. A short-lived ticket connects the browser directly to Render for WebSocket updates.
 
 ## Roles and boundaries
 

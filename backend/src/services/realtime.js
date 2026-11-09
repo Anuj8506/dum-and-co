@@ -6,6 +6,7 @@ function attachRealtime(server) {
   wss = new WebSocketServer({
     noServer: true,
     maxPayload: 1024,
+    closeTimeout: 1500,
     handleProtocols: (protocols) => (protocols.has('dumco') ? 'dumco' : false),
   });
   server.on('upgrade', async (req, socket, head) => {

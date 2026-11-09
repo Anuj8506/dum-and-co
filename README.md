@@ -2,6 +2,8 @@
 
 A Hyderabadi restaurant ordering app and live outlet kitchen workspace built for ISOCODE Labs problem 4. The project deliberately follows [Anuj's hostel-seat-allocation structure](https://github.com/Anuj8506/hostel-seat-allocation): CommonJS Express controllers/routes/models on the backend and React pages/components/services on the frontend.
 
+[Hosted demo](https://dum-and-co.vercel.app/) · [API health](https://dum-and-co-api.onrender.com/api/health) · [Reviewer walkthrough](deployment.md#reviewer-walkthrough)
+
 ## Run it
 
 Requires Node.js 22.12 or newer and npm. From this folder:

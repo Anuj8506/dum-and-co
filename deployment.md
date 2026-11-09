@@ -39,6 +39,8 @@ For local development only, a random JWT secret is generated into ignored `backe
 
 Use the [public GitHub repository](https://github.com/Anuj8506/dum-and-co) and its `main` branch for both services.
 
+The [frontend](https://dum-and-co.vercel.app/) runs on Vercel Hobby. The [API](https://dum-and-co-api.onrender.com/api/health) runs on a free Render web service with a free MongoDB Atlas replica set in Singapore. The first request after Render idles can take about a minute.
+
 1. Create a separate MongoDB Atlas replica set for synthetic demo records. Grant the application user access to the demo database and allow the Render service's outbound IP ranges. Store the connection string as a Render secret.
 2. On Render, create a Node web service with root directory `backend`. Build with `npm ci --omit=dev`, start with `npm start`, and set the health check to `/api/health`. Render provides `PORT`.
 3. Set `NODE_ENV=production`, `SEED_DEMO=true`, and the exact Vercel origin in `CLIENT_URL`. Generate a strong `JWT_SECRET` in Render and set `MONGODB_URI` there. Disabling `SEED_DEMO` blocks sign-in and session reuse for reserved demo accounts.
