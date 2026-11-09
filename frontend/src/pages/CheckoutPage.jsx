@@ -38,6 +38,10 @@ export default function CheckoutPage() {
     ? Math.min(user?.points || 0, 100, Math.floor((subtotal - discount) / 100))
     : 0;
   const total = subtotal - discount - points * 100;
+  const chooseFulfilment = (e) => {
+    setFulfilment(e.target.value);
+    setError('');
+  };
   const checkout = async (e) => {
     e.preventDefault();
     if (busy || !fulfilment || !menu.outlet) return;
@@ -159,7 +163,7 @@ export default function CheckoutPage() {
                     value="delivery"
                     required
                     checked={fulfilment === 'delivery'}
-                    onChange={(e) => setFulfilment(e.target.value)}
+                    onChange={chooseFulfilment}
                   />
                   Delivery (demo)
                 </label>
@@ -170,7 +174,7 @@ export default function CheckoutPage() {
                     value="pickup"
                     required
                     checked={fulfilment === 'pickup'}
-                    onChange={(e) => setFulfilment(e.target.value)}
+                    onChange={chooseFulfilment}
                   />
                   Pick up at kitchen
                 </label>
