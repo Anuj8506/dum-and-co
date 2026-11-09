@@ -42,6 +42,6 @@ Source: the expanded restaurant brief read from the signed-in ISOCODE workspace.
 
 ## Submission material
 
-Technical design is in `docs/TECHNICAL_DESIGN.md` with a rendered PDF companion. Setup, hosting recipe, environment variable names and reviewer accounts are in `deployment.md`. Preserve Git history. The public GitHub URL must be added at the top of the TDD after repository publication. No application submission or public publication has been performed by this local build.
+Technical design is in `docs/TECHNICAL_DESIGN.md` with a rendered PDF companion. Setup, hosting instructions, environment variable names and reviewer accounts are in `deployment.md`. The source and commit history are available in the [public GitHub repository](https://github.com/Anuj8506/dum-and-co).
 
 The brief explicitly says remaining MUST HAVE beyond CORE BUILD is optional depth. This build implements most of that depth; production external integrations and sustained load validation remain documented limits.

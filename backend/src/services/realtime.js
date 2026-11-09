@@ -1,13 +1,17 @@
 const { WebSocketServer, WebSocket } = require('ws');
 const env = require('../config/env');
-const { activeSession } = require('../middleware/auth.middleware');
+const { realtimeSession } = require('../middleware/auth.middleware');
 let wss;
 function attachRealtime(server) {
-  wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
+  wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 1024,
+    handleProtocols: (protocols) => (protocols.has('dumco') ? 'dumco' : false),
+  });
   server.on('upgrade', async (req, socket, head) => {
     if (req.url !== '/ws' || !env.origins.includes(req.headers.origin)) return socket.destroy();
     try {
-      const session = await activeSession(req);
+      const session = await realtimeSession(req);
       if (!session) return socket.destroy();
       wss.handleUpgrade(req, socket, head, (ws) => {
         ws.user = session.user;

@@ -163,6 +163,36 @@ test('sign-out revokes a copied cookie and closes its WebSocket without affectin
   await assert.rejects(once(replay, 'open'));
 });
 
+test('a hosted frontend can open a WebSocket without forwarding the login cookie', async (t) => {
+  await request(app).post('/api/auth/realtime').expect(401);
+  const cookie = await demoCookie('guest@dumco.example');
+  const { body } = await request(app)
+    .post('/api/auth/realtime')
+    .set('Cookie', cookie)
+    .set('Origin', 'http://localhost:5000')
+    .expect(200);
+  const connectWithTicket = () =>
+    new WebSocket(
+      `ws://127.0.0.1:${server.address().port}/ws`,
+      ['dumco', `ticket.${body.ticket}`],
+      {
+        headers: { Origin: 'http://localhost:5000' },
+        handshakeTimeout: 3000,
+      }
+    );
+  const ws = connectWithTicket();
+  t.after(() => ws.terminate());
+  assert.deepEqual(JSON.parse((await once(ws, 'message'))[0]), { type: 'connected' });
+  assert.equal(ws.protocol, 'dumco');
+  await request(app).get('/api/auth/me').set('Cookie', `dum_session=${body.ticket}`).expect(401);
+  const closed = once(ws, 'close');
+  await request(app).post('/api/auth/logout').set('Cookie', cookie).expect(200);
+  assert.equal((await closed)[0], 1008);
+  const replay = connectWithTicket();
+  t.after(() => replay.terminate());
+  await assert.rejects(once(replay, 'open'));
+});
+
 test('disabling demo mode blocks persisted demo credentials and cookies', async (t) => {
   const cookie = await demoCookie('admin@dumco.example');
   const previous = env.seedDemo;

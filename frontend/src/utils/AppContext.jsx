@@ -71,9 +71,21 @@ export function AppProvider({ children }) {
     let socket,
       retry,
       closed = false;
-    const connect = () => {
+    const connect = async () => {
       const base = import.meta.env.VITE_API_URL || window.location.origin;
-      socket = new WebSocket(`${base.replace(/^http/, 'ws')}/ws`);
+      const realtimeUrl = import.meta.env.VITE_WS_URL;
+      try {
+        const credentials = realtimeUrl ? await authService.realtime() : null;
+        if (closed) return;
+        socket = credentials
+          ? new WebSocket(realtimeUrl, ['dumco', `ticket.${credentials.ticket}`])
+          : new WebSocket(`${base.replace(/^http/, 'ws')}/ws`);
+      } catch (error) {
+        if (closed) return;
+        if (error.response?.status === 401) refreshUser();
+        else retry = setTimeout(connect, 3000);
+        return;
+      }
       socket.onopen = () => {
         setConnected(true);
         setRevision((n) => n + 1);

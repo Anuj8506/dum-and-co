@@ -1,6 +1,6 @@
 # Restaurant Ordering Technical Design
 
-Repository URL: Publication pending. Insert the real public GitHub URL here before submission.
+Repository URL: https://github.com/Anuj8506/dum-and-co
 
 Live application: Local demonstration at http://localhost:5000. No public deployment is claimed.
 

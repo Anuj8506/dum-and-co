@@ -37,18 +37,44 @@ function readSession(req) {
     return null;
   }
 }
-async function activeSession(req) {
-  const session = readSession(req);
-  if (!session) return null;
+async function loadActiveSession(session) {
+  if (!session || session.expiresAt.getTime() <= Date.now()) return null;
   const user = await User.findById(session.userId);
   if (!user || (!env.seedDemo && isDemoEmail(user.email))) return null;
   if (await RevokedSession.exists({ _id: session.key })) return null;
   return { ...session, user };
 }
+function activeSession(req) {
+  return loadActiveSession(readSession(req));
+}
+function realtimeTicket(session) {
+  return jwt.sign(
+    { id: session.userId, key: session.key, sessionExpires: session.expiresAt.getTime() },
+    env.secret,
+    { algorithm: 'HS256', issuer: 'dumco-realtime', expiresIn: 30 }
+  );
+}
+function realtimeSession(req) {
+  const header = req.headers['sec-websocket-protocol'];
+  if (!header) return activeSession(req);
+  const protocols = header.split(',').map((value) => value.trim());
+  const [channel, proof] = protocols;
+  if (protocols.length !== 2 || channel !== 'dumco' || !proof.startsWith('ticket.')) return null;
+  try {
+    const { id, key, sessionExpires } = jwt.verify(proof.slice('ticket.'.length), env.secret, {
+      algorithms: ['HS256'],
+      issuer: 'dumco-realtime',
+    });
+    return loadActiveSession({ userId: id, key, expiresAt: new Date(sessionExpires) });
+  } catch {
+    return null;
+  }
+}
 async function authenticate(req, res, next) {
   const session = await activeSession(req);
   if (!session) return res.status(401).json({ message: 'Please sign in to continue.' });
   req.user = session.user;
+  req.session = session;
   next();
 }
 const requireRole =
@@ -81,7 +107,8 @@ async function revokeSession(req, res) {
 module.exports = {
   authenticate,
   requireRole,
-  activeSession,
+  realtimeTicket,
+  realtimeSession,
   sessionCookie,
   revokeSession,
   isDemoEmail,

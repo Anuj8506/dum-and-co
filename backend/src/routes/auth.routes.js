@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { rateLimit } = require('express-rate-limit');
 const { truncates } = require('bcryptjs');
 const { validate, z } = require('../middleware/validate.middleware');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, realtimeTicket } = require('../middleware/auth.middleware');
 const c = require('../controllers/auth.controller');
 const limiter = rateLimit({
   windowMs: 15 * 60000,
@@ -33,5 +33,8 @@ router.post(
   c.register
 );
 router.get('/me', authenticate, c.me);
+router.post('/realtime', authenticate, (req, res) => {
+  res.json({ ticket: realtimeTicket(req.session) });
+});
 router.post('/logout', c.logout);
 module.exports = router;

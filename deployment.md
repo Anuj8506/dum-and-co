@@ -31,29 +31,23 @@ Names only; put real secret values in the hosting service's secret manager.
 | JWT_SECRET     | Random secret of at least 32 characters; required in production                                                                       |
 | LOCAL_DATABASE | Local development helper switch; production never starts the helper                                                                   |
 | SEED_DEMO      | Enables synthetic accounts/menu/orders; production requires explicit opt-in                                                           |
-| VITE_API_URL   | Optional separately hosted API origin; read at frontend build time                                                                    |
+| VITE_WS_URL    | Public Render WebSocket URL including `/ws`, read at Vercel build time                                                                |
 
 For local development only, a random JWT secret is generated into ignored `backend/.local/jwt-secret`. It is not a fixed source-code secret. No external AI key is needed: the numerical model trains locally from labelled synthetic fixtures.
 
-## Production deployment recipe
+## Hosted reviewer demo
 
-The app has been run locally. No public deployment URL or remote Git repository is claimed.
+Use the [public GitHub repository](https://github.com/Anuj8506/dum-and-co) and its `main` branch for both services.
 
-Recommended: deploy the built frontend and backend on the same HTTPS origin to preserve the HttpOnly SameSite=Lax session design. A Node host with WebSocket support, such as Render, Railway or an equivalent service, can serve this app. Use an India region where available for the client's data-residency planning. Hosting choice and operational compliance must be reviewed before real customer data is used.
+1. Create a separate MongoDB Atlas replica set for synthetic demo records. Grant the application user access to the demo database and allow the Render service's outbound IP ranges. Store the connection string as a Render secret.
+2. On Render, create a Node web service with root directory `backend`. Build with `npm ci --omit=dev`, start with `npm start`, and set the health check to `/api/health`. Render provides `PORT`.
+3. Set `NODE_ENV=production`, `SEED_DEMO=true`, and the exact Vercel origin in `CLIENT_URL`. Generate a strong `JWT_SECRET` in Render and set `MONGODB_URI` there. Disabling `SEED_DEMO` blocks sign-in and session reuse for reserved demo accounts.
+4. On Vercel, import the repository with root directory `frontend` and the Vite preset. Set `VITE_WS_URL` to the Render service's `wss://` URL ending in `/ws`. If the Render hostname changes, update the API rewrite in `frontend/vercel.json` and this variable.
+5. Verify `/api/health` through both hosts, then test sign-in, simulated checkout and live kitchen updates. Use fictional information for the hosted demo.
 
-1. Publish the source repository when approved, preserving local Git history.
-2. Create a MongoDB Atlas replica-set database. Configure an application-specific database user, TLS and a restricted network policy; store its URI only in the host's secret manager.
-3. Configure the variables listed above, including the precise deployed HTTPS origin in `CLIENT_URL`, `NODE_ENV=production`, a strong `JWT_SECRET`, and `MONGODB_URI`.
-4. For a fictional reviewer demo, enable `SEED_DEMO` and use a separate database with synthetic data. Disabling it blocks sign-in and session reuse for the reserved `dumco.example` accounts, including accounts already in the database.
-5. Build command: `npm ci && npm ci --prefix backend && npm ci --prefix frontend && npm run build`.
-6. Start command: `npm start`. The host supplies `PORT` if necessary.
-7. Health endpoint: `/api/health`. Enable WebSocket upgrades to `/ws` and set an idle timeout above 30 seconds.
-8. Verify customer, staff and manager demo flows, reconnection, stock pauses and order isolation. Do not use real card data: payments remain explicitly simulated.
-9. Add the real GitHub repository URL at the top of the TDD. Add the live URL if publicly deployed. Confirm repository visibility for the review period before uploading submission files.
+Vercel proxies `/api` to Render so the browser receives the HttpOnly session cookie on the frontend's own origin. The browser obtains a short-lived ticket through that proxy and uses it to connect directly to the Render WebSocket. The ticket grants access to the same live updates as its associated session and sign-out revokes both.
 
 Set `TRUST_PROXY` only when traffic arrives through proxies with known addresses that overwrite or correctly append forwarded IP headers. Direct connections ignore forwarded IP headers by default.
-
-Separate Vercel/Render hosting can match the hostel project's providers, but cross-site cookie handling requires a reviewed SameSite=None + Secure configuration and CSRF defence. This build intentionally recommends a single origin instead of silently weakening cookies.
 
 ## Reviewer demo logins
 
